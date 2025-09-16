@@ -1,0 +1,31 @@
+version: 1.0
+runtime: docker
+build:
+  commands:
+    build:
+      - echo "Building the application"
+run:
+  runtime-version: 18
+  command: npm start
+  network:
+    port: 3000
+    env:
+      - name: PORT
+        value: "3000"
+      - name: NODE_ENV
+        value: "production"
+  env:
+    - name: DB_HOST
+      value: "addr-district-api-db.cer6wo4gegs2.us-east-1.rds.amazonaws.com"
+    - name: DB_PORT
+      value: "5432"
+    - name: DB_NAME
+      value: "addr_district_db"
+    - name: DB_USER
+      value: "postgres"
+    - name: DB_PASSWORD
+      value: "ac5ufZompMoMVqjm"
+    - name: GEOMANCER_BASE_URL
+      value: "https://tools.wprdc.org/geo"
+    - name: CENSUS_GEOCODER_URL
+      value: "https://geocoding.geo.census.gov/geocoder"
