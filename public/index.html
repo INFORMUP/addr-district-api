@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Address District Lookup - Allegheny County</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            padding: 40px;
+            max-width: 800px;
+            width: 100%;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+            font-size: 2.2em;
+        }
+
+        .header p {
+            color: #7f8c8d;
+            font-size: 1.1em;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e1e8ed;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s ease;
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s ease;
+            width: 100%;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            margin: 20px 0;
+            color: #667eea;
+        }
+
+        .results {
+            margin-top: 30px;
+            display: none;
+        }
+
+        .result-card {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 15px;
+        }
+
+        .result-card h3 {
+            color: #2c3e50;
+            margin-bottom: 15px;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 5px;
+        }
+
+        .result-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .result-row:last-child {
+            border-bottom: none;
+        }
+
+        .result-label {
+            font-weight: 600;
+            color: #495057;
+        }
+
+        .result-value {
+            color: #6c757d;
+            text-align: right;
+        }
+
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            display: none;
+        }
+
+        .example {
+            background: #e7f3ff;
+            border: 1px solid #b3d9ff;
+            border-radius: 6px;
+            padding: 10px;
+            margin-top: 10px;
+            font-size: 14px;
+            color: #0066cc;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                padding: 25px;
+            }
+
+            .header h1 {
+                font-size: 1.8em;
+            }
+
+            .result-row {
+                flex-direction: column;
+                gap: 5px;
+            }
+
+            .result-value {
+                text-align: left;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Address District Lookup</h1>
+            <p>Find your representatives in Allegheny County, PA</p>
+        </div>
+
+        <form id="lookupForm">
+            <div class="form-group">
+                <label for="address">Enter Your Address:</label>
+                <input
+                    type="text"
+                    id="address"
+                    name="address"
+                    placeholder="123 Main St, Pittsburgh, PA 15217"
+                    required
+                >
+                <div class="example">
+                    Example: 5440 Aylesboro Ave, Pittsburgh, PA 15217
+                </div>
+            </div>
+
+            <button type="submit" class="btn" id="submitBtn">
+                Look Up Districts
+            </button>
+        </form>
+
+        <div class="loading" id="loading">
+            <p>Looking up your address...</p>
+        </div>
+
+        <div class="error" id="error"></div>
+
+        <div class="results" id="results">
+            <div class="result-card">
+                <h3>Location Information</h3>
+                <div class="result-row">
+                    <span class="result-label">Address:</span>
+                    <span class="result-value" id="result-address"></span>
+                </div>
+                <div class="result-row">
+                    <span class="result-label">Municipality:</span>
+                    <span class="result-value" id="result-municipality"></span>
+                </div>
+                <div class="result-row">
+                    <span class="result-label">County:</span>
+                    <span class="result-value" id="result-county"></span>
+                </div>
+            </div>
+
+            <div class="result-card">
+                <h3>Your Representatives</h3>
+                <div class="result-row">
+                    <span class="result-label">County Council:</span>
+                    <span class="result-value" id="result-county-council"></span>
+                </div>
+                <div class="result-row">
+                    <span class="result-label">City Council:</span>
+                    <span class="result-value" id="result-city-council"></span>
+                </div>
+                <div class="result-row">
+                    <span class="result-label">School District:</span>
+                    <span class="result-value" id="result-school-district"></span>
+                </div>
+                <div class="result-row">
+                    <span class="result-label">School Board:</span>
+                    <span class="result-value" id="result-school-board"></span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('lookupForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const address = document.getElementById('address').value.trim();
+            await performLookup(address);
+        });
+
+        function displayResults(data) {
+            console.log('displayResults called with:', data);
+
+            // Location info
+            document.getElementById('result-address').textContent = data.formatted_address || data.address;
+            document.getElementById('result-municipality').textContent = data.municipality || 'N/A';
+            document.getElementById('result-county').textContent = data.county || 'N/A';
+
+            // Representatives
+            const countyCouncil = data.county_council_member && data.county_council_district
+                ? `${data.county_council_member} (District ${data.county_council_district})`
+                : 'Not available';
+            document.getElementById('result-county-council').textContent = countyCouncil;
+
+            const cityCouncil = data.city_council_member && data.city_council_district
+                ? `${data.city_council_member} (District ${data.city_council_district})`
+                : 'Not available';
+            document.getElementById('result-city-council').textContent = cityCouncil;
+
+            document.getElementById('result-school-district').textContent = data.school_district || 'Not available';
+
+            const schoolBoard = data.school_board_member && data.school_board_district
+                ? `${data.school_board_member} (District ${data.school_board_district})`
+                : 'Not available';
+            document.getElementById('result-school-board').textContent = schoolBoard;
+
+            const resultsElement = document.getElementById('results');
+            console.log('Showing results element:', resultsElement);
+            showElement(resultsElement);
+            console.log('Results element display style after show:', resultsElement.style.display);
+        }
+
+        function showError(message) {
+            const errorDiv = document.getElementById('error');
+            errorDiv.textContent = message;
+            showElement(errorDiv);
+        }
+
+        function showElement(element) {
+            element.style.display = 'block';
+        }
+
+        function hideElement(element) {
+            element.style.display = 'none';
+        }
+
+        function hideElements(elements) {
+            elements.forEach(hideElement);
+        }
+
+        // Function to perform lookup
+        async function performLookup(address) {
+            const submitBtn = document.getElementById('submitBtn');
+            const loading = document.getElementById('loading');
+            const results = document.getElementById('results');
+            const error = document.getElementById('error');
+
+            if (!address) {
+                showError('Please enter an address');
+                return;
+            }
+
+            // Reset UI
+            hideElements([results, error]);
+            showElement(loading);
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Looking up...';
+
+            try {
+                console.log('Making API call for address:', address);
+                const response = await fetch(`http://localhost:3002/api/lookup?address=${encodeURIComponent(address)}`);
+                const data = await response.json();
+                console.log('API response:', data);
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'API request failed');
+                }
+
+                if (!data.supported) {
+                    showError(data.message || 'Address is not supported');
+                    return;
+                }
+
+                console.log('Calling displayResults with data:', data);
+                displayResults(data);
+
+            } catch (err) {
+                console.error('Lookup error:', err);
+                showError('Failed to look up address. Please try again.');
+            } finally {
+                hideElement(loading);
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Look Up Districts';
+            }
+        }
+
+        // Check for address parameter in URL on page load
+        window.addEventListener('DOMContentLoaded', function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const addressParam = urlParams.get('address');
+
+            if (addressParam) {
+                // Pre-fill the form and submit automatically
+                const cleanAddress = decodeURIComponent(addressParam.replace(/\+/g, ' '));
+                document.getElementById('address').value = cleanAddress;
+                performLookup(cleanAddress);
+            }
+        });
+    </script>
+</body>
+</html>
