@@ -84,6 +84,59 @@ router.post('/init-db', async (req, res) => {
   }
 });
 
+// Initialize single dataset
+router.post('/init-dataset/:dataset', async (req, res) => {
+  try {
+    const dataset = req.params.dataset;
+    console.log(`Starting initialization of dataset: ${dataset}`);
+
+    // 1. Create tables from schema if needed
+    const schemaPath = path.join(__dirname, '..', '..', 'sql', 'schema.sql');
+    const schema = fs.readFileSync(schemaPath, 'utf8');
+
+    console.log('Ensuring database schema exists...');
+    try {
+      await db.query(schema);
+      console.log('✓ Schema ready');
+    } catch (error) {
+      if (error.message.includes('already exists')) {
+        console.log('✓ Schema already exists');
+      } else {
+        throw error;
+      }
+    }
+
+    // 2. Initialize single dataset with optimized ETL service
+    console.log(`Loading ${dataset} data with optimized ETL...`);
+    const OptimizedETLService = require('../../scripts/etl-optimized');
+    const etl = new OptimizedETLService();
+
+    // Run single dataset
+    await etl.runSingleDataset(dataset);
+
+    // 3. Verify data was loaded
+    const stats = await db.query(`SELECT COUNT(*) as count FROM ${dataset}`);
+    const count = parseInt(stats.rows[0].count);
+
+    console.log(`✓ Dataset ${dataset} initialization completed successfully`);
+
+    res.json({
+      success: true,
+      message: `Dataset ${dataset} initialized successfully`,
+      records_loaded: count
+    });
+
+  } catch (error) {
+    console.error(`Dataset ${req.params.dataset} initialization failed:`, error);
+    res.status(500).json({
+      success: false,
+      error: 'Dataset initialization failed',
+      message: error.message,
+      dataset: req.params.dataset
+    });
+  }
+});
+
 // Check database status
 router.get('/db-status', async (req, res) => {
   try {
