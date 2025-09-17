@@ -306,4 +306,36 @@ router.post('/init-db-local', async (req, res) => {
   }
 });
 
+// Debug endpoint to check data directory contents
+router.get('/debug-data-files', async (req, res) => {
+  const path = require('path');
+  const fs = require('fs');
+
+  try {
+    const dataDir = path.join(__dirname, '..', '..', 'data');
+    console.log('Checking data directory:', dataDir);
+
+    const exists = fs.existsSync(dataDir);
+    if (!exists) {
+      return res.json({
+        error: 'Data directory not found',
+        expected_path: dataDir
+      });
+    }
+
+    const files = fs.readdirSync(dataDir);
+    res.json({
+      data_directory: dataDir,
+      exists: true,
+      files: files
+    });
+
+  } catch (error) {
+    res.status(500).json({
+      error: 'Failed to check data directory',
+      message: error.message
+    });
+  }
+});
+
 module.exports = router;
