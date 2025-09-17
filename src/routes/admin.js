@@ -227,4 +227,83 @@ router.get('/test-download/:dataset', async (req, res) => {
   }
 });
 
+// Initialize database using local data files only (no downloads)
+router.post('/init-db-local', async (req, res) => {
+  try {
+    console.log('Starting local database initialization...');
+
+    // 1. Create tables from schema if needed
+    const schemaPath = path.join(__dirname, '..', '..', 'sql', 'schema.sql');
+    const schema = fs.readFileSync(schemaPath, 'utf8');
+
+    console.log('Creating database schema...');
+    try {
+      await db.query(schema);
+      console.log('✓ Schema created successfully');
+    } catch (error) {
+      if (error.message.includes('already exists')) {
+        console.log('✓ Schema already exists, skipping creation');
+      } else {
+        throw error;
+      }
+    }
+
+    // 2. Check if data already exists
+    const existingData = await db.query('SELECT COUNT(*) FROM municipalities');
+    const recordCount = parseInt(existingData.rows[0].count);
+
+    if (recordCount > 0) {
+      return res.json({
+        success: true,
+        message: `Database already initialized with ${recordCount} municipality records`,
+        skipped: true
+      });
+    }
+
+    // 3. Load boundary data using local-only ETL service
+    console.log('Loading boundary data from local files...');
+    const LocalETLService = require('../../scripts/etl-local-only');
+    const etl = new LocalETLService();
+
+    // Run the local ETL process
+    await etl.runFullETL();
+
+    // 4. Verify data was loaded
+    const stats = await db.query(`
+      SELECT
+        (SELECT COUNT(*) FROM county_council) as county_districts,
+        (SELECT COUNT(*) FROM pgh_council) as city_districts,
+        (SELECT COUNT(*) FROM school_districts) as school_districts,
+        (SELECT COUNT(*) FROM school_board_districts) as school_board_districts,
+        (SELECT COUNT(*) FROM municipalities) as municipalities,
+        (SELECT COUNT(*) FROM pgh_wards) as wards
+    `);
+
+    const counts = stats.rows[0];
+
+    console.log('✓ Local database initialization completed successfully');
+
+    res.json({
+      success: true,
+      message: 'Database initialized successfully using local data',
+      data_loaded: {
+        county_council_districts: parseInt(counts.county_districts),
+        city_council_districts: parseInt(counts.city_districts),
+        school_districts: parseInt(counts.school_districts),
+        school_board_districts: parseInt(counts.school_board_districts),
+        municipalities: parseInt(counts.municipalities),
+        wards: parseInt(counts.wards)
+      }
+    });
+
+  } catch (error) {
+    console.error('Local database initialization failed:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Local database initialization failed',
+      message: error.message
+    });
+  }
+});
+
 module.exports = router;
