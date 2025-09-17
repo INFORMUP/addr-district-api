@@ -15,8 +15,16 @@ router.post('/init-db', async (req, res) => {
     const schema = fs.readFileSync(schemaPath, 'utf8');
 
     console.log('Creating database schema...');
-    await db.query(schema);
-    console.log('✓ Schema created successfully');
+    try {
+      await db.query(schema);
+      console.log('✓ Schema created successfully');
+    } catch (error) {
+      if (error.message.includes('already exists')) {
+        console.log('✓ Schema already exists, skipping creation');
+      } else {
+        throw error;
+      }
+    }
 
     // 2. Check if data already exists
     const existingData = await db.query('SELECT COUNT(*) FROM municipalities');
