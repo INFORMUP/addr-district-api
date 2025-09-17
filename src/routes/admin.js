@@ -38,10 +38,10 @@ router.post('/init-db', async (req, res) => {
       });
     }
 
-    // 3. Load boundary data using ETL service
-    console.log('Loading boundary data...');
-    const ETLService = require('../../scripts/etl');
-    const etl = new ETLService();
+    // 3. Load boundary data using optimized ETL service
+    console.log('Loading boundary data with optimized ETL...');
+    const OptimizedETLService = require('../../scripts/etl-optimized');
+    const etl = new OptimizedETLService();
 
     // Run the ETL process
     await etl.runFullETL();
