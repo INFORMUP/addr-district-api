@@ -1,34 +1,41 @@
 const fs = require('fs');
 const path = require('path');
+const axios = require('axios');
 
 const LOCAL_DATASETS = {
   county_council: {
     localFile: 'council.geojson',
+    url: 'https://data.wprdc.org/dataset/73eb573e-cc12-4f29-8e69-17f7975c89cb/resource/501b2f84-ac1c-40a3-8099-e4e431f993df/download/council.geojson',
     table: 'county_council',
     description: 'Allegheny County Council Districts'
   },
   pgh_council: {
     localFile: 'council_districts_2022.geojson',
+    url: 'https://data.wprdc.org/dataset/8249c8b6-37c6-4849-abe7-c9abbcdf6197/resource/eb8d8237-16d5-4b19-ab71-ed89343aa448/download/council_districts_2022.geojson',
     table: 'pgh_council',
     description: 'Pittsburgh City Council Districts'
   },
   school_districts: {
     localFile: 'school_districts.geojson',
+    url: 'https://data.wprdc.org/dataset/e41c0a67-837f-460c-94a9-6650b74f10da/resource/fd4d0f47-5a05-4716-861e-b0b328effe8b/download/school_districts.geojson',
     table: 'school_districts',
     description: 'Allegheny County School Districts'
   },
   pgh_wards: {
     localFile: 'wards.geojson',
+    url: 'https://data.wprdc.org/dataset/766bbec2-e744-408e-9c8c-a58b662b6007/resource/2312299d-d632-4921-9c8a-6cbfb529522d/download/wards.geojson',
     table: 'pgh_wards',
     description: 'Pittsburgh Wards'
   },
   municipalities: {
     localFile: 'muni_boundaries.geojson',
+    url: 'https://data.wprdc.org/dataset/2fa577d6-1a6b-46a8-8165-27fecac1dee5/resource/b0cb0249-d1ba-45b7-9918-dc86fa8af04c/download/muni_boundaries.geojson',
     table: 'municipalities',
     description: 'Allegheny County Municipalities'
   },
   school_board_districts: {
     localFile: 'SchoolDistricts2022.geojson',
+    url: null, // Will use placeholder data
     table: 'school_board_districts',
     description: 'Pittsburgh School Board Districts'
   }
@@ -38,6 +45,77 @@ class LocalETLService {
   constructor() {
     this.dataDir = path.join(__dirname, '..', 'data');
     this.BATCH_SIZE = 10; // Process 10 features at a time
+    this.ensureDataDir();
+  }
+
+  ensureDataDir() {
+    if (!fs.existsSync(this.dataDir)) {
+      fs.mkdirSync(this.dataDir, { recursive: true });
+    }
+  }
+
+  async downloadDataset(key, dataset) {
+    if (!dataset.url) {
+      console.log(`No URL for ${key}, creating placeholder file`);
+      return this.createPlaceholderFile(key, dataset);
+    }
+
+    const filepath = path.join(this.dataDir, dataset.localFile);
+
+    console.log(`Downloading ${dataset.description}...`);
+
+    try {
+      const response = await axios({
+        method: 'GET',
+        url: dataset.url,
+        responseType: 'stream',
+        timeout: 60000
+      });
+
+      const writer = fs.createWriteStream(filepath);
+      response.data.pipe(writer);
+
+      return new Promise((resolve, reject) => {
+        writer.on('finish', () => {
+          console.log(`✓ Downloaded ${dataset.localFile}`);
+          resolve(filepath);
+        });
+        writer.on('error', reject);
+      });
+    } catch (error) {
+      console.error(`✗ Failed to download ${dataset.localFile}:`, error.message);
+      throw error;
+    }
+  }
+
+  createPlaceholderFile(key, dataset) {
+    const filepath = path.join(this.dataDir, dataset.localFile);
+    const placeholderData = {
+      "type": "FeatureCollection",
+      "features": [
+        {
+          "type": "Feature",
+          "properties": {
+            "District": 1,
+            "Dir2022": "Placeholder Member 1"
+          },
+          "geometry": {
+            "type": "Polygon",
+            "coordinates": [[
+              [-80.0, 40.4],
+              [-79.9, 40.4],
+              [-79.9, 40.5],
+              [-80.0, 40.5],
+              [-80.0, 40.4]
+            ]]
+          }
+        }
+      ]
+    };
+
+    fs.writeFileSync(filepath, JSON.stringify(placeholderData, null, 2));
+    console.log(`✓ Created placeholder file ${dataset.localFile}`);
+    return filepath;
   }
 
   async loadDataToPostGIS(key, dataset) {
@@ -46,7 +124,8 @@ class LocalETLService {
     console.log(`Loading ${dataset.description} from local file...`);
 
     if (!fs.existsSync(filepath)) {
-      throw new Error(`Local file ${dataset.localFile} not found in ${this.dataDir}`);
+      console.log(`Local file ${dataset.localFile} not found, downloading...`);
+      await this.downloadDataset(key, dataset);
     }
 
     const db = require('../src/database/connection');
