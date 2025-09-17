@@ -84,7 +84,7 @@ class OptimizedETLService {
         method: 'GET',
         url: dataset.url,
         responseType: 'stream',
-        timeout: 30000
+        timeout: 120000
       });
 
       const writer = fs.createWriteStream(filepath);
