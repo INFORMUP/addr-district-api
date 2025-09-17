@@ -230,7 +230,7 @@ router.get('/test-download/:dataset', async (req, res) => {
 // Initialize database using local data files only (no downloads)
 router.post('/init-db-local', async (req, res) => {
   try {
-    console.log('Starting local database initialization...');
+    console.log('Starting local database initialization with local data files...');
 
     // 1. Create tables from schema if needed
     const schemaPath = path.join(__dirname, '..', '..', 'sql', 'schema.sql');
