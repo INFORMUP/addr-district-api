@@ -177,4 +177,54 @@ router.get('/db-status', async (req, res) => {
   }
 });
 
+// Test endpoint to just download a dataset
+router.get('/test-download/:dataset', async (req, res) => {
+  try {
+    const dataset = req.params.dataset;
+    console.log(`Testing download of dataset: ${dataset}`);
+
+    const OptimizedETLService = require('../../scripts/etl-optimized');
+    const etl = new OptimizedETLService();
+
+    const WPRDC_DATASETS = {
+      county_council: {
+        url: 'https://data.wprdc.org/dataset/73eb573e-cc12-4f29-8e69-17f7975c89cb/resource/501b2f84-ac1c-40a3-8099-e4e431f993df/download/council.geojson',
+        format: 'geojson',
+        table: 'county_council',
+        description: 'Allegheny County Council Districts'
+      },
+      municipalities: {
+        url: 'https://data.wprdc.org/dataset/2fa577d6-1a6b-46a8-8165-27fecac1dee5/resource/b0cb0249-d1ba-45b7-9918-dc86fa8af04c/download/muni_boundaries.geojson',
+        format: 'geojson',
+        table: 'municipalities',
+        description: 'Allegheny County Municipalities'
+      }
+    };
+
+    if (!WPRDC_DATASETS[dataset]) {
+      return res.status(400).json({ error: 'Dataset not found' });
+    }
+
+    // Just try downloading
+    const filepath = await etl.downloadDataset(dataset, WPRDC_DATASETS[dataset]);
+
+    console.log(`✓ Downloaded ${dataset} successfully to ${filepath}`);
+
+    res.json({
+      success: true,
+      message: `Successfully downloaded ${dataset}`,
+      filepath: filepath
+    });
+
+  } catch (error) {
+    console.error(`Download test failed for ${req.params.dataset}:`, error);
+    res.status(500).json({
+      success: false,
+      error: 'Download test failed',
+      message: error.message,
+      dataset: req.params.dataset
+    });
+  }
+});
+
 module.exports = router;
