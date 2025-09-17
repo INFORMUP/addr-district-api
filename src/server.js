@@ -6,6 +6,7 @@ require('dotenv').config();
 
 const lookupRoutes = require('./routes/lookup');
 const healthRoutes = require('./routes/health');
+const adminRoutes = require('./routes/admin');
 
 const app = express();
 const PORT = process.env.PORT || 3002;
@@ -27,6 +28,7 @@ app.use(express.static(path.join(__dirname, '..', 'public')));
 
 app.use('/api', lookupRoutes);
 app.use('/health', healthRoutes);
+app.use('/admin', adminRoutes);
 
 app.get('/', (req, res) => {
   res.json({
@@ -35,7 +37,9 @@ app.get('/', (req, res) => {
     version: '1.0.0',
     endpoints: {
       'GET /api/lookup': 'Lookup districts for an address',
-      'GET /health': 'Health check endpoint'
+      'GET /health': 'Health check endpoint',
+      'POST /admin/init-db': 'Initialize database with boundary data',
+      'GET /admin/db-status': 'Check database initialization status'
     }
   });
 });
