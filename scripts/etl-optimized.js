@@ -223,7 +223,8 @@ class OptimizedETLService {
       console.log(`✓ Loaded ${dataset.description} to table ${dataset.table} (${features.length} features)`);
 
       // Clear the parsed GeoJSON from memory
-      delete geojson;
+      // Setting to null instead of delete for strict mode compatibility
+      geojsonData = null;
 
     } catch (error) {
       console.error(`✗ Failed to load ${dataset.description}:`, error.message);
